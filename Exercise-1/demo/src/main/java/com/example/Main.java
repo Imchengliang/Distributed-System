@@ -1,7 +1,17 @@
 package com.example;
 
+import java.io.IOException;
+
 public class Main {
     public static void main(String[] args) {
-        System.out.println("Hello world! from the other side");
+        try {
+            CityService cityService = new CityService("Exercise-1/demo/src/main/resources/dataset/exercise_1_dataset.csv");
+
+            // Call the method to print the first 5 cities to make sure it runs
+            cityService.printFirstFiveCities();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
