@@ -58,7 +58,7 @@ public class DistributedClient {
                             int cityCount = scanner.nextInt();
                             System.out.print("Enter the minimum population: ");
                             long minCityPopulation = scanner.nextLong();
-                            int countriesCount = server.getNumberOfCountries1(cityCount, minCityPopulation);
+                            int countriesCount = server.getNumberOfCountries(cityCount, minCityPopulation);
                             System.out.println("Number of countries with at least " + cityCount + " cities having population >= " + minCityPopulation + ": " + countriesCount);
                             scanner.nextLine(); // Consume newline
                             break;
@@ -71,7 +71,7 @@ public class DistributedClient {
                             long minPopulationRange = scanner.nextLong();
                             System.out.print("Enter the maximum population: ");
                             long maxPopulation = scanner.nextLong();
-                            int countriesInRange = server.getNumberOfCountries2(cityCountRange, minPopulationRange, maxPopulation);
+                            int countriesInRange = server.getNumberOfCountries(cityCountRange, minPopulationRange, maxPopulation);
                             System.out.println("Number of countries with at least " + cityCountRange + " cities having population between " + minPopulationRange + " and " + maxPopulation + ": " + countriesInRange);
                             scanner.nextLine(); // Consume newline
                             break;

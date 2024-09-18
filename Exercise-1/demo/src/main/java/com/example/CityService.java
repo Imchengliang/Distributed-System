@@ -11,9 +11,8 @@ public class CityService implements CityInterface {
     //maybe make cities final
     private List<City> cities;
 
-    public CityService(String csvFilePath) throws IOException {
-        // Use CSVReader to load the cities from the CSV file
-        // might move this to its own method for caching later
+
+    void CSVReader(String csvFilePath) throws IOException {
         CSVDatabase csvDatabase = new CSVDatabase();
         this.cities = csvDatabase.readCitiesFromCSV(csvFilePath);
     }
