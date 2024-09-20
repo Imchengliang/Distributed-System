@@ -6,6 +6,9 @@ public class ServerSimulator {
         // Number of servers (or zones) to create
         int numServers = 5;
 
+        try{
+        LoadBalancer2 loadBalancer = new LoadBalancer2(numServers);
+
         for (int i = 1; i <= numServers; i++) {
             final int serverZone = i;  // serverZone
 
@@ -17,12 +20,19 @@ public class ServerSimulator {
                     String serverName = "CityServer" + serverZone;
                     //can also autoassign port, using 0 as port
                     int port = 1099+ serverZone; // assign port + i
+
+                    //register server at loadbalancer
+                    loadBalancer.registerServer(serverZone,new ServerInfo("127.0.0.1",port, serverZone));
+
                     Server.startServer(serverName, port); // Start server logic
 
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }).start();
+        }
+        }catch (Exception e){
+            e.printStackTrace();
         }
     }
 }
