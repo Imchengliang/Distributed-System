@@ -7,51 +7,92 @@ import java.rmi.registry.Registry;
 import java.util.*;
 
 public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInterface {
-    private Map<Integer, List<ServerInterface>> zoneServers;
-    private Map<Integer, Integer> zoneServerIndex;
+    private Random random = new Random();
+
+    private Registry registry = null;
+    private int port;
+    private int numServers;
+
+    private ServerInterface[] servers;
+    private int[] serverQueuesSizes;
+    private int[] serverAssignmentCounts;
 
     public LoadBalancer() throws RemoteException {
         super();
-        zoneServers = new HashMap<>();
-        zoneServerIndex = new HashMap<>();
+        this.numServers = numServers;
+        this.port = port;
+        this.servers = new ServerInterface[numServers];
+        this.serverQueuesSizes = new int[numServers];
+        this.serverAssignmentCounts = new int[numServers];
+        //startLoadBalancer();
 
-        for (int zone = 1; zone <= 5; zone++) {
-            zoneServers.put(zone, new ArrayList<>());
-            zoneServerIndex.put(zone, 0);
-
-            try {
-                ServerInterface server = (ServerInterface) Naming.lookup("rmi://localhost/Server" + zone);
-                zoneServers.get(zone).add(server);
-            } catch (Exception e) {
-                System.err.println("Error locating server " + zone + ": " + e.getMessage());
+        try {
+            // Export LoadBalancer
+            UnicastRemoteObject.exportObject(this, port);
+            registry = LocateRegistry.getRegistry("localhost", port - 1);
+            for (int i = 0; i < numServers; i++) {
+                servers[i] = (ServerInterface) registry.lookup("server_" + i);
             }
+
+            // Bind the LoadBalancer to the registry
+            registry.bind("LoadBalancer", this);
+
+        } catch (Exception e) {
+            System.out.println("\nError:\n" + e);
+            System.exit(1);
         }
+        System.out.println("LoadBalancer is started");
+    }
+
+    private void updateAssignmentCount(int clientZone) {
+        serverAssignmentCounts[clientZone]++;
+
+        if (serverAssignmentCounts[clientZone] >= 18) {
+            new Thread(new ProxyServerQueueUpdater(this, clientZone)).start();
+            serverAssignmentCounts[clientZone] = 0;
+        }
+    }
+
+    // Get queue size in each server
+    public void updateQueueData(int clientZone) throws RemoteException {
+        int queueSize = servers[clientZone].getQueueSize();
+        serverQueuesSizes[clientZone] = queueSize;
     }
 
     @Override
-    public String assignServer(int clientZone, String clientMessage) throws RemoteException {
-        List<ServerInterface> servers = zoneServers.get(clientZone);
-        int currentIndex = zoneServerIndex.get(clientZone);
+    public ServerAddress assignServer(int clientZone, String clientMessage) throws RemoteException {
+        int selectedServer;
 
-        for (int i = 0; i < servers.size(); i++) {
-            ServerInterface server = servers.get(currentIndex);
-            if (!server.isBusy()) {
-                zoneServerIndex.put(clientZone, (currentIndex + 1) % servers.size());
-                return server.processRequest(clientMessage);
+        if (clientZone < 0 || clientZone > 4) {
+            System.out.println("Invalid client zone.");
+            System.exit(1);
+        }
+
+        if (serverQueuesSizes[clientZone] < 18) {
+            selectedServer = clientZone;
+            //return new ServerAddress("server_" + selectedServer);
+        }
+
+        else {
+            int neighborServer1 = (clientZone % 5) + 1; 
+            int neighborServer2 = ((clientZone + 1) % 5) + 1; 
+
+            if (serverQueuesSizes[neighborServer1] >= 8 && serverQueuesSizes[neighborServer2] >= 8) {
+                selectedServer = clientZone;
             }
-            currentIndex = (currentIndex + 1) % servers.size();
+
+            else if (serverQueuesSizes[neighborServer1] == serverQueuesSizes[neighborServer2]) {
+                selectedServer = (random.nextBoolean()) ? neighborServer1 : neighborServer2;
+            }
+
+            else {
+                selectedServer = (serverQueuesSizes[neighborServer1] < serverQueuesSizes[neighborServer2]) ? neighborServer1 : neighborServer2;
+            }
         }
 
-        return "No available server in zone " + clientZone;
-    }
+        updateAssignmentCount(clientZone);
 
-    public static void main(String[] args) {
-        try {
-            LoadBalancer lb = new LoadBalancer();
-            Naming.rebind("rmi://localhost/LoadBalancer", lb);
-            System.out.println("LoadBalancer started.");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        System.out.println("server_" + selectedServer + " is assigned to client_" + clientZone);
+        return new ServerAddress("server_" + selectedServer);
     }
 }
