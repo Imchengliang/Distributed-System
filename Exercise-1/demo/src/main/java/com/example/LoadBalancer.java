@@ -13,7 +13,7 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
     private int port;
     private int numServers;
 
-    private ServerInterface[] servers;
+    private CityInterface[] servers;
     private int[] serverQueuesSizes;
     private int[] serverAssignmentCounts;
 
@@ -21,7 +21,7 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
         super();
         this.numServers = numServers;
         this.port = port;
-        this.servers = new ServerInterface[numServers];
+        this.servers = new CityInterface[numServers];
         this.serverQueuesSizes = new int[numServers];
         this.serverAssignmentCounts = new int[numServers];
         //startLoadBalancer();
@@ -31,7 +31,7 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
             UnicastRemoteObject.exportObject(this, port);
             registry = LocateRegistry.getRegistry("localhost", port - 1);
             for (int i = 0; i < numServers; i++) {
-                servers[i] = (ServerInterface) registry.lookup("server_" + i);
+                servers[i] = (CityInterface) registry.lookup("server_" + i);
             }
 
             // Bind the LoadBalancer to the registry
@@ -60,7 +60,7 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
     }
 
     @Override
-    public ServerAddress assignServer(int clientZone, String clientMessage) throws RemoteException {
+    public ServerAddress assignServer(int clientZone) throws RemoteException {
         int selectedServer;
 
         if (clientZone < 0 || clientZone > 4) {
@@ -92,7 +92,7 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
 
         updateAssignmentCount(clientZone);
 
-        System.out.println("server_" + selectedServer + " is assigned to client_" + clientZone);
-        return new ServerAddress("server_" + selectedServer);
+        System.out.println("Server " + selectedServer + " is assigned to Client " + clientZone);
+        return new ServerAddress("Server " + selectedServer);
     }
 }
