@@ -24,7 +24,7 @@ public class ServerSimulator {
                     //register server at loadbalancer
                     loadBalancer.registerServer(serverZone,new ServerInfo("127.0.0.1",port, serverZone));
 
-                    Server.startServer(serverName, port); // Start server logic
+                    Server.startServer(serverName, port, serverZone); // Start server logic
 
                 } catch (Exception e) {
                     e.printStackTrace();

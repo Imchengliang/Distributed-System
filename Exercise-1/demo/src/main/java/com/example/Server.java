@@ -6,26 +6,32 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Server extends CityService{
-    public Server () throws RemoteException {
-        super();
+    private final int serverZone; // Server zone for latency calculation
+
+    public Server(String csvFile, int serverZone) throws RemoteException, IOException {
+        super("Exercise-1/demo/src/main/resources/dataset/exercise_1_dataset.csv", serverZone);
+        this.serverZone = serverZone;
     }
 
-    public static void startServer(String name, int port) {
+    public static void startServer(String name, int port, int serverZone) {
         try {
-            CityService obj = new CityService();
-            CityInterface stub = (CityInterface) UnicastRemoteObject.exportObject(obj,port);
-            // LocateRegistry.createRegistry(port) if you want 5 instances of port
-            Registry registry = LocateRegistry.getRegistry();
-
-            //using rebind instead of bind, can also use bind and add method for unbind of registry name
-            registry.rebind(name , stub);
+            Server obj = new Server("Exercise-1/demo/src/main/resources/dataset/exercise_1_dataset.csv", serverZone);
+            CityInterface stub = (CityInterface) UnicastRemoteObject.exportObject(obj, port);
+            Registry registry = LocateRegistry.createRegistry(port); // Create registry on the specified port
+            registry.rebind(name, stub);
             System.out.println("Server " + name + " ready on port " + port);
 
+
         } catch (Exception e) {
-            System.err.println("Server Exception" + e.toString());
+            System.err.println("Server Exception: " + e.toString());
             throw new RuntimeException(e);
         }
     }
+
+
 }
