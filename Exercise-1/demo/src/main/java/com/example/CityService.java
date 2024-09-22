@@ -30,9 +30,9 @@ public class CityService implements CityInterface {
     }
 
 
-private void checkZoneLatency(Request request) throws InterruptedException {
+private void checkZoneLatency(int clientZone) throws InterruptedException {
     // Check client zone and add latency
-    if (request.getClientZone() == this.serverZone) {
+    if (clientZone == this.serverZone) {
         Thread.sleep(80); // Same zone, lower latency
     } else {
         Thread.sleep(170); // Different zones, higher latency
@@ -77,7 +77,7 @@ private void checkZoneLatency(Request request) throws InterruptedException {
     }
 
     @Override
-    public int getPopulationOfCountry(String countryName) throws RemoteException {
+    public int getPopulationOfCountry(int clientZone, String countryName) throws RemoteException {
         String cacheKey = "population:" + countryName;
         if (cache.containsKey(cacheKey)) {
             System.out.println("Fetching from cache for country: " + countryName);
@@ -111,7 +111,7 @@ private void checkZoneLatency(Request request) throws InterruptedException {
     }
 
     @Override
-    public int getNumberOfCities(String countryName, int min) throws RemoteException {
+    public int getNumberOfCities(int clientZone,String countryName, int min) throws RemoteException {
         String cacheKey = "cities:" + countryName + ":" + min;
         if (cache.containsKey(cacheKey)) {
             System.out.println("Fetching from cache for cities in " + countryName + " with min " + min);
@@ -142,7 +142,7 @@ private void checkZoneLatency(Request request) throws InterruptedException {
     }
 
     @Override
-    public int getNumberOfCountries(int cityCount, int minPopulation) throws RemoteException {
+    public int getNumberOfCountries(int clientZone, int cityCount, int minPopulation) throws RemoteException {
         String cacheKey = "countries:" + cityCount + ":" + minPopulation;
         if (cache.containsKey(cacheKey)) {
             System.out.println("Fetching from cache for countries with cityCount " + cityCount + " and minPopulation " + minPopulation);
@@ -189,7 +189,7 @@ private void checkZoneLatency(Request request) throws InterruptedException {
     }
 
     @Override
-    public int getNumberOfCountries(int cityCount, int minPopulation, int maxPopulation) throws RemoteException {
+    public int getNumberOfCountries(int clientZone, int cityCount, int minPopulation, int maxPopulation) throws RemoteException {
         String cacheKey = "countries:" + cityCount + ":" + minPopulation + ":" + maxPopulation;
         if (cache.containsKey(cacheKey)) {
             System.out.println("Fetching from cache for countries with cityCount " + cityCount + ", minPopulation " + minPopulation + " and maxPopulation " + maxPopulation);

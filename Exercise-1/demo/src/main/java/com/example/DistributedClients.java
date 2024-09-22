@@ -66,36 +66,32 @@ public class DistributedClients implements Remote {
             methodName = matcher.group(1); // Get the method name
             args = matcher.group(2);       // Get the arguments
             zone = matcher.group(3);
-        } 
+        }
 
         try {
-            Query query = null;
+            int result = 0;
             switch (methodName) {
                 case "getPopulationOfCountry" -> {
-                    query = server.getPopulationOfCountry(clientZone, args);
+                    result = server.getPopulationOfCountry(clientZone, args);  // args is the country name in this case
                 }
                 case "getNumberOfCities" -> {
                     String[] arg = args.split(" ");
-                    query = server.getNumberOfCities(clientZone, arg[0], Integer.parseInt(arg[1]));
+                    result = server.getNumberOfCities(clientZone, arg[0], Integer.parseInt(arg[1]));  // arg[0] is country name, arg[1] is min population
                 }
                 case "getNumberOfCountries" -> {
                     String[] arg = args.split(" ");
                     if (arg.length == 2) {
-                        query = server.getNumberOfCountries(clientZone, Integer.parseInt(arg[0]), Integer.parseInt(arg[1]));
+                        result = server.getNumberOfCountries(clientZone, Integer.parseInt(arg[0]), Integer.parseInt(arg[1]));  // cityCount, minPopulation
+                    } else {
+                        result = server.getNumberOfCountries(clientZone, Integer.parseInt(arg[0]), Integer.parseInt(arg[1]), Integer.parseInt(arg[2]));  // cityCount, minPopulation, maxPopulation
                     }
-                    else{
-                        query = server.getNumberOfCountries(clientZone, Integer.parseInt(arg[0]), Integer.parseInt(arg[1]), Integer.parseInt(arg[2]));
-                    }
-                }
-                default -> {
-                    System.out.println("Error in: '" + methodName;
-                    System.exit(1);
                 }
             }
-            query.timeStamps[0] = System.currentTimeMillis();
+            System.out.println("Result: " + result);
+            //query.timeStamps[0] = System.currentTimeMillis();
             //server.sendQuery(query);
-            sentQueries++;
-            System.out.println("Client sent query. Number of sent queries: " + sentQueries);
+            //sentQueries++;
+            //System.out.println("Client sent query. Number of sent queries: " + sentQueries);
 
 
         } catch (Exception e) {

@@ -1,4 +1,5 @@
-package com.example.rmi;
+package com.example;
+
 
 import java.rmi.*;
 import java.rmi.server.*;
@@ -17,7 +18,7 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
     private int[] serverQueuesSizes;
     private int[] serverAssignmentCounts;
 
-    public LoadBalancer() throws RemoteException {
+    public LoadBalancer(int numServers, int port) throws RemoteException {
         super();
         this.numServers = numServers;
         this.port = port;
@@ -28,14 +29,16 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
 
         try {
             // Export LoadBalancer
-            UnicastRemoteObject.exportObject(this, port);
-            registry = LocateRegistry.getRegistry("localhost", port - 1);
-            for (int i = 0; i < numServers; i++) {
+            //TODO:LOOK FOR REGISTRY ON RIGHT PORT
+
+            for (int i = 1; i < numServers; i++) {
+                int serverPort = 1099 + i;
+                registry = LocateRegistry.getRegistry("localhost", serverPort);
                 servers[i] = (CityInterface) registry.lookup("server_" + i);
             }
 
             // Bind the LoadBalancer to the registry
-            registry.bind("LoadBalancer", this);
+            registry.bind("load-balancer", this);
 
         } catch (Exception e) {
             System.out.println("\nError:\n" + e);
@@ -47,17 +50,23 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
     private void updateAssignmentCount(int clientZone) {
         serverAssignmentCounts[clientZone]++;
 
+        /* for checking on the queue
         if (serverAssignmentCounts[clientZone] >= 18) {
             new Thread(new ProxyServerQueueUpdater(this, clientZone)).start();
             serverAssignmentCounts[clientZone] = 0;
         }
+
+         */
     }
 
     // Get queue size in each server
+    /*
     public void updateQueueData(int clientZone) throws RemoteException {
         int queueSize = servers[clientZone].getQueueSize();
         serverQueuesSizes[clientZone] = queueSize;
     }
+
+     */
 
     @Override
     public ServerAddress assignServer(int clientZone) throws RemoteException {

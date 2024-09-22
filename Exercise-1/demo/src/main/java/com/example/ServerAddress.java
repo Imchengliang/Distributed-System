@@ -1,4 +1,4 @@
-package com.example.rmi;
+package com.example;
 
 import java.io.Serializable;
 
