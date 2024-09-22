@@ -1,0 +1,23 @@
+getPopulationOfCountry Norway Zone:2
+getNumberOfCities Sweden 1000 Zone:3
+getNumberOfCountries 3 1000 2000 Zone:1
+getNumberOfCountries 5 5000 Zone:1
+getPopulationOfCountry Belgium Zone:5
+getPopulationOfCountry Sweden Zone:2
+getPopulationOfCountry Finland Zone:4
+getNumberOfCountries 13 44000 Zone:1
+getPopulationOfCountry France Zone:3
+getPopulationOfCountry Italy Zone:2
+getNumberOfCountries 9 9000 Zone:1
+getNumberOfCities Sweden 12000 Zone:3
+getNumberOfCities Belgium 6000 Zone:5
+getNumberOfCountries 23 1000 20000 Zone:4
+getNumberOfCities Spain 100000 Zone:2
+getNumberOfCities Germany 1000 Zone:5
+getNumberOfCountries 18 4000 9000 Zone:1
+getNumberOfCities Norway 1000 Zone:1
+getPopulationOfCountry Germany Zone:2
+getNumberOfCities China 100000 Zone:5
+getNumberOfCities Sweden 6000 Zone:4
+getNumberOfCountries 92 90000 Zone:1
+getNumberOfCities Sweden 7000 Zone:5
