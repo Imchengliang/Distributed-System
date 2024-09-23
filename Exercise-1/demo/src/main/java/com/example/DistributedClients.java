@@ -1,5 +1,6 @@
 package com.example;
 
+import java.io.IOException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -11,7 +12,11 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Collections;
+import java.io.FileWriter;
+import java.io.IOException;
 import javax.management.Query;
 
 public class DistributedClients implements Remote {
@@ -19,18 +24,24 @@ public class DistributedClients implements Remote {
     private Registry registry = null;
     private LoadBalancerInterface loadBalancer = null;
     private CityInterface server = null;
+    private boolean toggle = true;
+    private List<List<Object>> results = new ArrayList<>();
+    
+    private List<Integer> getPopulationOfCountryTurnAround = new ArrayList<>();
+    private List<Integer> getPopulationOfCountryExecution = new ArrayList<>();
+    private List<Integer> getPopulationOfCountryWaiting = new ArrayList<>();
 
-    long getPopulationOfCountryTurnaround = 0;
-    long getNumberOfCitiesTurnaround = 0;
-    long getNumberOfCountriesTurnaround = 0;
+    private List<Integer> getNumberOfCitiesTurnAround = new ArrayList<>();
+    private List<Integer> getNumberOfCitiesExecution = new ArrayList<>();
+    private List<Integer> getNumberOfCitiesWaiting = new ArrayList<>();
 
-    long getPopulationOfCountryExecution = 0;
-    long getNumberOfCitiesExecution = 0;
-    long getNumberOfCountriesExecution = 0;
+    private List<Integer> getNumberOfCountries1TurnAround = new ArrayList<>();
+    private List<Integer> getNumberOfCountries1Execution = new ArrayList<>();
+    private List<Integer> getNumberOfCountries1Waiting = new ArrayList<>();
 
-    long getPopulationOfCountryWaiting = 0;
-    long getNumberOfCitiesWaiting = 0;
-    long getNumberOfCountriesWaiting = 0;
+    private List<Integer> getNumberOfCountries2TurnAround = new ArrayList<>();
+    private List<Integer> getNumberOfCountries2Execution = new ArrayList<>();
+    private List<Integer> getNumberOfCountries2Waiting = new ArrayList<>();
 
     Lock lock = new ReentrantLock();
 
@@ -73,21 +84,44 @@ public class DistributedClients implements Remote {
             switch (methodName) {
                 case "getPopulationOfCountry" -> {
                     result = server.getPopulationOfCountry(clientZone, args);  // args is the country name in this case
+                    results.add(result);
+                    getPopulationOfCountryTurnAround.add(results[3]);
+                    getPopulationOfCountryExecution.add(result[4]);
+                    getPopulationOfCountryWaiting.add(result[5]);
                 }
                 case "getNumberOfCities" -> {
                     String[] arg = args.split(" ");
                     result = server.getNumberOfCities(clientZone, arg[0], Integer.parseInt(arg[1]));  // arg[0] is country name, arg[1] is min population
+                    results.add(result);
+                    getNumberOfCitiesTurnAround.add(results[3]);
+                    getNumberOfCitiesExecution.add(result[4]);
+                    getNumberOfCitiesWaiting.add(result[5]);
                 }
                 case "getNumberOfCountries" -> {
                     String[] arg = args.split(" ");
                     if (arg.length == 2) {
                         result = server.getNumberOfCountries(clientZone, Integer.parseInt(arg[0]), Integer.parseInt(arg[1]));  // cityCount, minPopulation
+                        results.add(result);
+                        getNumberOfCountries1TurnAround.add(results[3]);
+                        getNumberOfCountries1Execution.add(result[4]);
+                        getNumberOfCountries1Waiting.add(result[5]);
                     } else {
                         result = server.getNumberOfCountries(clientZone, Integer.parseInt(arg[0]), Integer.parseInt(arg[1]), Integer.parseInt(arg[2]));  // cityCount, minPopulation, maxPopulation
+                        results.add(result);
+                        getNumberOfCountries2TurnAround.add(results[3]);
+                        getNumberOfCountries2Execution.add(result[4]);
+                        getNumberOfCountries2Waiting.add(result[5]);
                     }
                 }
             }
             System.out.println("Result: " + result);
+
+            // trigger delay
+            int delay = toggle ? 50 : 20;
+            Thread.sleep(delay);
+            toggle = !toggle;
+
+            //writeResultToTxt(results);
             //query.timeStamps[0] = System.currentTimeMillis();
             //server.sendQuery(query);
             //sentQueries++;
@@ -97,6 +131,55 @@ public class DistributedClients implements Remote {
         } catch (Exception e) {
             System.out.println("Query Error:" + e.toString());
             System.exit(1);
+        }
+    }
+
+    private static Object[] calculateAvgMinMax(List<Integer> numbers) {
+        int sum = 0;
+        int max = Collections.max(numbers);
+        int min = Collections.min(numbers); 
+
+        for (int number : numbers) {
+            sum += number;
+        }
+
+        float average = (float) sum / numbers.size();
+
+        return new Object[] {average, min, max};
+    }
+
+    private void writeResultToTxt(List<List<Object>> results){
+        try {
+            FileWriter writer = new FileWriter("dataset/naive_server.txt");
+
+            for (List<Object> result : results) {
+                writer.write(result.toString() + "\n");
+            }
+
+            Object[] stats11 = calculateAvgMinMax(getPopulationOfCountryTurnAround);
+            Object[] stats12 = calculateAvgMinMax(getPopulationOfCountryExecution);
+            Object[] stats13 = calculateAvgMinMax(getPopulationOfCountryWaiting);
+            writer.write("getPopulationOfCountry avg turn-around time: " + stats11[0] + "ms, avg execution time: " + stats12[0] + "ms, avg waiting time: " + stats13[0] + "ms, min turn-around time: " + stats11[1] + "ms, max turn-around time: " + stats11[1] + "ms\n");
+
+            Object[] stats21 = calculateAvgMinMax(getNumberOfCitiesTurnAround);
+            Object[] stats22 = calculateAvgMinMax(getNumberOfCitiesExecution);
+            Object[] stats23 = calculateAvgMinMax(getNumberOfCitiesWaiting);
+            writer.write("getNumberOfCities avg turn-around time: " + stats21[0] + "ms, avg execution time: " + stats22[0] + "ms, avg waiting time: " + stats23[0] + "ms, min turn-around time: " + stats21[1] + "ms, max turn-around time: " + stats21[1] + "ms\n");
+
+            Object[] stats31 = calculateAvgMinMax(getNumberOfCountries1TurnAround);
+            Object[] stats32 = calculateAvgMinMax(getNumberOfCountries1Execution);
+            Object[] stats33 = calculateAvgMinMax(getNumberOfCountries1Waiting);
+            writer.write("getNumberOfCountries avg turn-around time: " + stats31[0] + "ms, avg execution time: " + stats32[0] + "ms, avg waiting time: " + stats33[0] + "ms, min turn-around time: " + stats31[1] + "ms, max turn-around time: " + stats31[1] + "ms\n");
+
+            Object[] stats41 = calculateAvgMinMax(getNumberOfCountries2TurnAround);
+            Object[] stats42 = calculateAvgMinMax(getNumberOfCountries2Execution);
+            Object[] stats43 = calculateAvgMinMax(getNumberOfCountries2Waiting);
+            writer.write("getNumberOfCountries avg turn-around time: " + stats41[0] + "ms, avg execution time: " + stats42[0] + "ms, avg waiting time: " + stats43[0] + "ms, min turn-around time: " + stats41[1] + "ms, max turn-around time: " + stats41[1] + "ms\n");
+
+            writer.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

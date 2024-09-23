@@ -5,7 +5,7 @@ import java.util.Scanner;
 
 public class RunDistributedClients {
     DistributedClients client;
-    String filename = "src/main/resources/dataset/input.txt";
+    String filename = "dataset/input.txt";
     Scanner scanner = null;
 
     public void sendQuery() {
@@ -15,6 +15,7 @@ public class RunDistributedClients {
             int clientZone = Integer.parseInt(zone[1]);
             client.sendQueryToServer(query, clientZone);
         }
+        //client.writeResultToTxt();
     }
     
     public void runClient(int startPort) {
