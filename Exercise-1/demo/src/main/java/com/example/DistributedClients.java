@@ -27,21 +27,21 @@ public class DistributedClients implements Remote {
     private boolean toggle = true;
     private List<List<CityServiceResult>> results = new ArrayList<>();
     
-    private List<CityServiceResult> getPopulationOfCountryTurnAround = new ArrayList<>();
-    private List<CityServiceResult> getPopulationOfCountryExecution = new ArrayList<>();
-    private List<CityServiceResult> getPopulationOfCountryWaiting = new ArrayList<>();
+    private List<Integer> getPopulationOfCountryTurnAround = new ArrayList<>();
+    private List<Integer> getPopulationOfCountryExecution = new ArrayList<>();
+    private List<Integer> getPopulationOfCountryWaiting = new ArrayList<>();
 
-    private List<CityServiceResult> getNumberOfCitiesTurnAround = new ArrayList<>();
-    private List<CityServiceResult> getNumberOfCitiesExecution = new ArrayList<>();
-    private List<CityServiceResult> getNumberOfCitiesWaiting = new ArrayList<>();
+    private List<Integer> getNumberOfCitiesTurnAround = new ArrayList<>();
+    private List<Integer> getNumberOfCitiesExecution = new ArrayList<>();
+    private List<Integer> getNumberOfCitiesWaiting = new ArrayList<>();
 
-    private List<CityServiceResult> getNumberOfCountries1TurnAround = new ArrayList<>();
-    private List<CityServiceResult> getNumberOfCountries1Execution = new ArrayList<>();
-    private List<CityServiceResult> getNumberOfCountries1Waiting = new ArrayList<>();
+    private List<Integer> getNumberOfCountries1TurnAround = new ArrayList<>();
+    private List<Integer> getNumberOfCountries1Execution = new ArrayList<>();
+    private List<Integer> getNumberOfCountries1Waiting = new ArrayList<>();
 
-    private List<CityServiceResult> getNumberOfCountries2TurnAround = new ArrayList<>();
-    private List<CityServiceResult> getNumberOfCountries2Execution = new ArrayList<>();
-    private List<CityServiceResult> getNumberOfCountries2Waiting = new ArrayList<>();
+    private List<Integer> getNumberOfCountries2TurnAround = new ArrayList<>();
+    private List<Integer> getNumberOfCountries2Execution = new ArrayList<>();
+    private List<Integer> getNumberOfCountries2Waiting = new ArrayList<>();
 
     Lock lock = new ReentrantLock();
 
@@ -80,38 +80,51 @@ public class DistributedClients implements Remote {
         }
 
         try {
-            //int result = 0;
-            List<CityServiceResult> result;
+            List<CityServiceResult> result = new ArrayList<>();;
             switch (methodName) {
                 case "getPopulationOfCountry" -> {
                     result = server.getPopulationOfCountry(clientZone, args);  // args is the country name in this case
                     results.add(result);
-                    getPopulationOfCountryTurnAround.add(result.get(4));
-                    getPopulationOfCountryExecution.add(result.get(5));
-                    getPopulationOfCountryWaiting.add(result.get(6));
+                    for (CityServiceResult cityResult : result) {
+                        getPopulationOfCountryTurnAround.add((int) cityResult.getTurnaroundTime());
+                        getPopulationOfCountryExecution.add((int) cityResult.getExecutionTime());
+                        getPopulationOfCountryWaiting.add((int) cityResult.getWaitingTime());
+                    }
                 }
                 case "getNumberOfCities" -> {
                     String[] arg = args.split(" ");
                     result = server.getNumberOfCities(clientZone, arg[0], Integer.parseInt(arg[1]));  // arg[0] is country name, arg[1] is min population
                     results.add(result);
-                    getNumberOfCitiesTurnAround.add(result.get(4));
-                    getNumberOfCitiesExecution.add(result.get(5));
-                    getNumberOfCitiesWaiting.add(result.get(6));
+                    for (CityServiceResult cityResult : result) {
+                        getNumberOfCitiesTurnAround.add((int) cityResult.getTurnaroundTime());
+                        getNumberOfCitiesExecution.add((int) cityResult.getExecutionTime());
+                        getNumberOfCitiesWaiting.add((int) cityResult.getWaitingTime());
+                    }
                 }
                 case "getNumberOfCountries" -> {
                     String[] arg = args.split(" ");
                     if (arg.length == 2) {
                         result = server.getNumberOfCountries(clientZone, Integer.parseInt(arg[0]), Integer.parseInt(arg[1]));  // cityCount, minPopulation
                         results.add(result);
-                        getNumberOfCountries1TurnAround.add(result.get(4));
-                        getNumberOfCountries1Execution.add(result.get(5));
-                        getNumberOfCountries1Waiting.add(result.get(6));
+                        for (CityServiceResult cityResult : result) {
+                            getNumberOfCountries1TurnAround.add((int) cityResult.getTurnaroundTime());
+                            getNumberOfCountries1Execution.add((int) cityResult.getExecutionTime());
+                            getNumberOfCountries1Waiting.add((int) cityResult.getWaitingTime());
+                        }
                     } else {
                         result = server.getNumberOfCountries(clientZone, Integer.parseInt(arg[0]), Integer.parseInt(arg[1]), Integer.parseInt(arg[2]));  // cityCount, minPopulation, maxPopulation
                         results.add(result);
-                        getNumberOfCountries2TurnAround.add(result.get(4));
-                        getNumberOfCountries2Execution.add(result.get(5));
-                        getNumberOfCountries2Waiting.add(result.get(6));
+                        //CityServiceResult cityResult1 = result.get(4);
+                        //getNumberOfCountries2TurnAround.add((int) cityResult1.getTurnaroundTime());
+                        //CityServiceResult cityResult2 = result.get(5);
+                        //getNumberOfCountries2Execution.add((int) cityResult2.getExecutionTime());
+                        //CityServiceResult cityResult3 = result.get(6);
+                        //getNumberOfCountries2Waiting.add((int) cityResult3.getWaitingTime());
+                        for (CityServiceResult cityResult : result) {
+                            getNumberOfCountries2TurnAround.add((int) cityResult.getTurnaroundTime());
+                            getNumberOfCountries2Execution.add((int) cityResult.getExecutionTime());
+                            getNumberOfCountries2Waiting.add((int) cityResult.getWaitingTime());
+                        }
                     }
                 }
             }
