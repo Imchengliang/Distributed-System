@@ -7,21 +7,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.FutureTask;
+import java.util.ArrayList;
 
 public class CityService implements CityInterface {
-
-    //maybe make cities final
-
 
     private List<City> cities;
     private final ConcurrentLinkedQueue<Runnable> taskQueue = new ConcurrentLinkedQueue<>();
     private final int serverZone;
     private volatile boolean executing = false;
-
-    private final FixedSizeCache<String, Integer> cache;
-
+    private final FixedSizeCache<String, CityServiceResult> cache;
     private final boolean cacheEnabled;
-
 
     public CityService(String csvFilePath, int serverZone, boolean cacheEnabled) throws IOException {
         CSVDatabase csvDatabase = new CSVDatabase();
@@ -29,47 +24,52 @@ public class CityService implements CityInterface {
         this.serverZone = serverZone;
         this.cacheEnabled = cacheEnabled;
         this.cache = new FixedSizeCache<>(150);
-
-        // Start the task acceptance and processing threads
         new Thread(this::processTasks).start();
     }
 
-
-private void checkZoneLatency(int clientZone) throws InterruptedException {
-    // Check client zone and add latency
-    if (clientZone == this.serverZone) {
-        Thread.sleep(80); // Same zone, lower latency
-    } else {
-        Thread.sleep(170); // Different zones, higher latency
-    }
-}
-
-    public void addTask(Runnable task) {
-        taskQueue.add(task);
-        synchronized (taskQueue) {
-            taskQueue.notify(); // Notify the processing thread
+    private void checkZoneLatency(int clientZone) throws InterruptedException {
+        if (clientZone == this.serverZone) {
+            Thread.sleep(80); // Same zone, lower latency
+        } else {
+            Thread.sleep(170); // Different zones, higher latency
         }
     }
 
-    // Processes tasks from the queue
+    public void addTask(Runnable task, int clientZone) {
+        taskQueue.add(new TimedTask(task, clientZone));
+        synchronized (taskQueue) {
+            taskQueue.notify();
+        }
+    }
+
     private void processTasks() {
         while (true) {
-            Runnable task = taskQueue.poll(); // Fetch the next task
-            if (task != null) {
-                System.out.println("processing new task");
-                executing = true; // Indicate that we're in execution mode
+            TimedTask timedTask = (TimedTask) taskQueue.poll(); // Fetch the next task
+            if (timedTask != null) {
+                executing = true;
                 try {
-                    System.out.println("starting execution of task");
-                    task.run(); // Execute the task
-                    System.out.println("task finished");
+                    long delayStartTime = System.currentTimeMillis();
+                    checkZoneLatency(timedTask.getClientZone());
+                    long delayEndTime = System.currentTimeMillis();
+
+                    // Calculate the delay
+                    long delayTime = delayEndTime - delayStartTime;
+
+                    // Set the delay time in the timedTask
+                    timedTask.setDelayTime(delayTime);
+
+                    timedTask.run(); // Execute the task
+
+                    long executionTime = timedTask.getExecutionTime(); // Get adjusted execution time
+                    long waitingTime = timedTask.getWaitingTime(); // Get waiting time
+
+                    // You can log or process execution and waiting times as needed
                 } catch (Exception e) {
                     System.out.println("Error during task execution: " + e.getMessage());
                 } finally {
-                    executing = false; // Reset the execution flag
+                    executing = false;
                 }
             } else {
-                // Wait if no tasks are available
-                System.out.println("waiting for task");
                 synchronized (taskQueue) {
                     try {
                         taskQueue.wait(); // Wait for a new task
@@ -81,13 +81,16 @@ private void checkZoneLatency(int clientZone) throws InterruptedException {
         }
     }
 
+
+
     @Override
-    public int getPopulationOfCountry(int clientZone, String countryName) throws RemoteException {
+    public List<CityServiceResult> getPopulationOfCountry(int clientZone, String countryName) throws RemoteException {
         String cacheKey = "population:" + countryName;
         if (cacheEnabled && cache.containsKey(cacheKey)) {
-            System.out.println("Fetching from cache for country: " + countryName);
-            return cache.get(cacheKey);
+            CityServiceResult cachedResult = cache.get(cacheKey);
+            return List.of(cachedResult);
         }
+
         FutureTask<Integer> futureTask = new FutureTask<>(() -> {
             int totalPopulation = 0;
             for (City city : cities) {
@@ -95,33 +98,36 @@ private void checkZoneLatency(int clientZone) throws InterruptedException {
                     totalPopulation += city.getPopulation();
                 }
             }
-            //might remove the sout later
-            System.out.println(totalPopulation);
-
             return totalPopulation;
         });
 
-        addTask(futureTask);
+        long startTime = System.currentTimeMillis();
+        TimedTask timedTask = new TimedTask(futureTask, clientZone);
+        addTask(timedTask, clientZone); // Add to queue
 
         try {
-            // This will block until the task is completed
             int population = futureTask.get();
-            // Store result in cache
-            cache.put(cacheKey, population);
-            return population;
+            long endTime = System.currentTimeMillis();
+            long turnaroundTime = endTime - startTime;
+            long executionTime = timedTask.getExecutionTime();
+            long waitingTime = timedTask.getWaitingTime();
+
+            CityServiceResult result = new CityServiceResult(population, "getPopulationOfCountry", countryName, clientZone, turnaroundTime, executionTime, waitingTime, serverZone);
+            cache.put(cacheKey, result);
+            return List.of(result);
         } catch (Exception e) {
             throw new RemoteException("Error retrieving population", e);
         }
-
     }
 
     @Override
-    public int getNumberOfCities(int clientZone,String countryName, int min) throws RemoteException {
+    public List<CityServiceResult> getNumberOfCities(int clientZone, String countryName, int min) throws RemoteException {
         String cacheKey = "cities:" + countryName + ":" + min;
         if (cacheEnabled && cache.containsKey(cacheKey)) {
-            System.out.println("Fetching from cache for cities in " + countryName + " with min " + min);
-            return cache.get(cacheKey);
+            CityServiceResult cachedResult = cache.get(cacheKey);
+            return List.of(cachedResult);
         }
+
         FutureTask<Integer> futureTask = new FutureTask<>(() -> {
             int numberOfCities = 0;
             for (City city : cities) {
@@ -129,112 +135,119 @@ private void checkZoneLatency(int clientZone) throws InterruptedException {
                     numberOfCities += 1;
                 }
             }
-            System.out.println(numberOfCities);
             return numberOfCities;
         });
 
-        addTask(futureTask);
+        long startTime = System.currentTimeMillis();
+        TimedTask timedTask = new TimedTask(futureTask, clientZone);
+        addTask(timedTask, clientZone);
 
         try {
             int numberOfCities = futureTask.get();
-            cache.put(cacheKey, numberOfCities); // Cache the result
-            return numberOfCities;
+            long endTime = System.currentTimeMillis();
+            long turnaroundTime = endTime - startTime;
+            long executionTime = timedTask.getExecutionTime();
+            long waitingTime = timedTask.getWaitingTime();
 
+            CityServiceResult result = new CityServiceResult(numberOfCities, "getNumberOfCities", countryName + " " + min, clientZone, turnaroundTime, executionTime, waitingTime, serverZone);
+            cache.put(cacheKey, result);
+            return List.of(result);
         } catch (Exception e) {
             throw new RemoteException("Error retrieving Cities", e);
         }
-
     }
 
     @Override
-    public int getNumberOfCountries(int clientZone, int cityCount, int minPopulation) throws RemoteException {
+    public List<CityServiceResult> getNumberOfCountries(int clientZone, int cityCount, int minPopulation) throws RemoteException {
         String cacheKey = "countries:" + cityCount + ":" + minPopulation;
         if (cacheEnabled && cache.containsKey(cacheKey)) {
-            System.out.println("Fetching from cache for countries with cityCount " + cityCount + " and minPopulation " + minPopulation);
-            return cache.get(cacheKey);
+            CityServiceResult cachedResult = cache.get(cacheKey);
+            return List.of(cachedResult);
         }
+
         FutureTask<Integer> futureTask = new FutureTask<>(() -> {
             Map<String, Integer> countryCityCount = new HashMap<>();
             for (City city : cities) {
                 if (city.getPopulation() >= minPopulation) {
                     String countryName = city.getCountryNameEN();
-
-                    //if countryCityCount already exists add 1 if not initialize it with the value 1
-                    if (countryCityCount.containsKey(countryName)) {
-                        countryCityCount.put(countryName, countryCityCount.get(countryName) + 1);
-                    } else {
-                        countryCityCount.put(countryName, 1);
-                    }
+                    countryCityCount.put(countryName, countryCityCount.getOrDefault(countryName, 0) + 1);
                 }
             }
 
             int numberOfCountries = 0;
-
-            //traverse hashmap to return values if they are above cityCount
             for (int count : countryCityCount.values()) {
                 if (count >= cityCount) {
                     numberOfCountries++;
                 }
             }
-
-            System.out.println(numberOfCountries);
             return numberOfCountries;
         });
 
-        addTask(futureTask);
+        long startTime = System.currentTimeMillis();
+        TimedTask timedTask = new TimedTask(futureTask, clientZone);
+        addTask(timedTask, clientZone);
 
         try {
             int numberOfCountries = futureTask.get();
-            cache.put(cacheKey, numberOfCountries); // Cache the result
-            return numberOfCountries;
+            long endTime = System.currentTimeMillis();
+            long turnaroundTime = endTime - startTime;
+            long executionTime = timedTask.getExecutionTime();
+            long waitingTime = timedTask.getWaitingTime();
+
+            CityServiceResult result = new CityServiceResult(numberOfCountries, "getNumberOfCountries", cityCount + " " + minPopulation, clientZone, turnaroundTime, executionTime, waitingTime, serverZone);
+            cache.put(cacheKey, result);
+            return List.of(result);
         } catch (Exception e) {
             throw new RemoteException("Error retrieving countries", e);
         }
-
     }
 
     @Override
-    public int getNumberOfCountries(int clientZone, int cityCount, int minPopulation, int maxPopulation) throws RemoteException {
+    public List<CityServiceResult> getNumberOfCountries(int clientZone, int cityCount, int minPopulation, int maxPopulation) throws RemoteException {
         String cacheKey = "countries:" + cityCount + ":" + minPopulation + ":" + maxPopulation;
         if (cacheEnabled && cache.containsKey(cacheKey)) {
-            System.out.println("Fetching from cache for countries with cityCount " + cityCount + ", minPopulation " + minPopulation + " and maxPopulation " + maxPopulation);
-            return cache.get(cacheKey);
+            CityServiceResult cachedResult = cache.get(cacheKey);
+            return List.of(cachedResult);
         }
+
         FutureTask<Integer> futureTask = new FutureTask<>(() -> {
             Map<String, Integer> countryCityCount = new HashMap<>();
             for (City city : cities) {
                 if (city.getPopulation() >= minPopulation && city.getPopulation() <= maxPopulation) {
                     String countryName = city.getCountryNameEN();
-
-                    //if countryCityCount already exists add 1 if not initialize it with the value 1
-                    if (countryCityCount.containsKey(countryName)) {
-                        countryCityCount.put(countryName, countryCityCount.get(countryName) + 1);
-                    } else {
-                        countryCityCount.put(countryName, 1);
-                    }
+                    countryCityCount.put(countryName, countryCityCount.getOrDefault(countryName, 0) + 1);
                 }
             }
 
             int numberOfCountries = 0;
-
-            //traverse hashmap to return values if they are above cityCount
             for (int count : countryCityCount.values()) {
                 if (count >= cityCount) {
                     numberOfCountries++;
                 }
             }
-
-            System.out.println(numberOfCountries);
             return numberOfCountries;
         });
-        addTask(futureTask);
+
+        long startTime = System.currentTimeMillis();
+        TimedTask timedTask = new TimedTask(futureTask, clientZone);
+        addTask(timedTask, clientZone);
 
         try {
             int numberOfCountries = futureTask.get();
-            cache.put(cacheKey, numberOfCountries); // Cache the result
-            return numberOfCountries;
+            long endTime = System.currentTimeMillis();
+            long turnaroundTime = endTime - startTime;
+            long executionTime = timedTask.getExecutionTime();
+            long waitingTime = timedTask.getWaitingTime();
+
+            CityServiceResult result = new CityServiceResult(numberOfCountries, "getNumberOfCountries", cityCount + " " + minPopulation + " " + maxPopulation, clientZone, turnaroundTime, executionTime, waitingTime, serverZone);
+            cache.put(cacheKey, result);
+            return List.of(result);
         } catch (Exception e) {
             throw new RemoteException("Error retrieving countries", e);
         }
+    }
+    @Override
+    public int getQueueSize() throws RemoteException {
+        return taskQueue.size();
     }
 }

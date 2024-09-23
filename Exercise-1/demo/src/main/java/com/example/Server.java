@@ -11,15 +11,10 @@ import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Server extends CityService{
-    private final int serverZone; // Server zone for latency calculation
-
-    private final boolean cacheEnabled;
 
 
     public Server(String csvFile, int serverZone, boolean cacheEnabled) throws RemoteException, IOException {
         super("dataset/exercise_1_dataset.csv", serverZone, cacheEnabled);
-        this.serverZone = serverZone;
-        this.cacheEnabled = cacheEnabled;
     }
 
     public static void startServer(String name, int port, int serverZone, boolean enableCache) {
