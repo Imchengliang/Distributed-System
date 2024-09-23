@@ -32,7 +32,9 @@ public class ServerSimulator {
                     //can also autoassign port, using 0 as port
                     int port = 1099+ serverZone; // assign port + i
 
-                    Server.startServer(serverName, port, serverZone, finalEnableCache); // Start server logic
+                    String logFilePath = "queue_log_" + serverZone + ".txt";
+
+                    Server.startServer(serverName, port, serverZone, finalEnableCache, logFilePath); // Start server logic
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -41,7 +43,7 @@ public class ServerSimulator {
         }
             // Wait for a moment to ensure servers are ready
             System.out.println("waiting a second, maybe more");
-            Thread.sleep(5000);  // Adjust as necessary for your system
+            Thread.sleep(2000);  // Adjust as necessary for your system
             System.out.println("starting loadbalancer");
             // Start the load balancer
             if (loadBalancer == null) {

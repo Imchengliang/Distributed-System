@@ -1,5 +1,7 @@
 package com.example;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
@@ -12,14 +14,47 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class Server extends CityService{
 
-
-    public Server(String csvFile, int serverZone, boolean cacheEnabled) throws RemoteException, IOException {
+    private final String logFilePath;
+    private int lastQueueSize = 0;
+    public Server(String csvFile, int serverZone, boolean cacheEnabled, String logFilePath) throws RemoteException, IOException {
         super("dataset/exercise_1_dataset.csv", serverZone, cacheEnabled);
+        this.logFilePath = logFilePath;
+        logQueueSize(getQueueSize());
     }
 
-    public static void startServer(String name, int port, int serverZone, boolean enableCache) {
+    @Override
+    public void addTask(Runnable task, int clientZone) {
+        super.addTask(task, clientZone); // Call the super method to add the task
+        logQueueSizeIfChanged(); // Log if the queue size has changed
+    }
+
+    private void logQueueSizeIfChanged() {
         try {
-            Server obj = new Server("dataset/exercise_1_dataset.csv", serverZone, enableCache);
+            int currentQueueSize = getQueueSize();
+            if (currentQueueSize != lastQueueSize) {
+                lastQueueSize = currentQueueSize;
+                logQueueSize(currentQueueSize); // Log the new queue size
+            }
+        } catch (RemoteException e) {
+            System.err.println("Failed to get queue size: " + e.getMessage());
+            // You may want to handle this more gracefully depending on your needs
+        }
+    }
+
+    private void logQueueSize(int queueSize) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(logFilePath, true))) {
+            String logEntry = System.currentTimeMillis() + ": Queue size: " + queueSize;
+            writer.write(logEntry);
+            writer.newLine();
+            System.out.println(logEntry); // Optional: print to console for real-time monitoring
+        } catch (IOException e) {
+            System.err.println("Error writing to log file: " + e.getMessage());
+        }
+    }
+
+    public static void startServer(String name, int port, int serverZone, boolean enableCache, String logFilePath) {
+        try {
+            Server obj = new Server("dataset/exercise_1_dataset.csv", serverZone, enableCache, logFilePath);
             CityInterface stub = (CityInterface) UnicastRemoteObject.exportObject(obj, port);
             Registry registry;
             try {

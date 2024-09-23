@@ -53,4 +53,18 @@ public class CityServiceResult {
     public int getServerZone() {
         return serverZone;
     }
+
+    @Override
+    public String toString() {
+        return "CityServiceResult{" +
+                "result=" + result +
+                ", methodName='" + methodName + '\'' +
+                ", inputQuery='" + inputQuery + '\'' +
+                ", clientZone=" + clientZone +
+                ", turnaroundTime=" + turnaroundTime +
+                ", executionTime=" + executionTime +
+                ", waitingTime=" + waitingTime +
+                ", serverZone=" + serverZone +
+                '}';
+    }
 }

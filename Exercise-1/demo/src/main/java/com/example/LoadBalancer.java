@@ -72,7 +72,8 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
     public ServerAddress assignServer(int clientZone) throws RemoteException {
         int selectedServer;
 
-        if (clientZone < 0 || clientZone > 4) {
+        // was clientZone 0 to 4 previously
+        if (clientZone < 1 || clientZone > numServers) {
             System.out.println("Invalid client zone.");
             System.exit(1);
         }
@@ -102,6 +103,6 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
         updateAssignmentCount(clientZone);
 
         System.out.println("Server " + selectedServer + " is assigned to Client " + clientZone);
-        return new ServerAddress("Server " + selectedServer);
+        return new ServerAddress("server_" + selectedServer);
     }
 }

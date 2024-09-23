@@ -80,7 +80,7 @@ public class DistributedClients implements Remote {
         }
 
         try {
-            List<CityServiceResult> result = new ArrayList<>();;
+            List<CityServiceResult> result = null;
             switch (methodName) {
                 case "getPopulationOfCountry" -> {
                     result = server.getPopulationOfCountry(clientZone, args);  // args is the country name in this case

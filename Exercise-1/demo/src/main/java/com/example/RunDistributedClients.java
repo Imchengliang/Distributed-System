@@ -5,7 +5,7 @@ import java.util.Scanner;
 
 public class RunDistributedClients {
     DistributedClients client;
-    String filename = "dataset/input.txt";
+    String filename = "dataset/exercise_1_input.txt";
     Scanner scanner = null;
 
     public void sendQuery() {
