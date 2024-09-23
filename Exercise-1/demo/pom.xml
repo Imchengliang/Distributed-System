@@ -8,6 +8,7 @@
     <artifactId>demo</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+    <!-- changing source and target to 11 so i can look at server and client on local machine -->
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>

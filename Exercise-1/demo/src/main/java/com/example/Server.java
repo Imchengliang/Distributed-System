@@ -13,18 +13,29 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class Server extends CityService{
     private final int serverZone; // Server zone for latency calculation
 
-    public Server(String csvFile, int serverZone) throws RemoteException, IOException {
-        super("Exercise-1/demo/src/main/resources/dataset/exercise_1_dataset.csv", serverZone);
+    private final boolean cacheEnabled;
+
+
+    public Server(String csvFile, int serverZone, boolean cacheEnabled) throws RemoteException, IOException {
+        super("dataset/exercise_1_dataset.csv", serverZone, cacheEnabled);
         this.serverZone = serverZone;
+        this.cacheEnabled = cacheEnabled;
     }
 
-    public static void startServer(String name, int port, int serverZone) {
+    public static void startServer(String name, int port, int serverZone, boolean enableCache) {
         try {
-            Server obj = new Server("Exercise-1/demo/src/main/resources/dataset/exercise_1_dataset.csv", serverZone);
+            Server obj = new Server("dataset/exercise_1_dataset.csv", serverZone, enableCache);
             CityInterface stub = (CityInterface) UnicastRemoteObject.exportObject(obj, port);
-            Registry registry = LocateRegistry.createRegistry(port); // Create registry on the specified port
+            Registry registry;
+            try {
+                registry = LocateRegistry.getRegistry(1099);  // Try to get the registry at 1099
+                registry.list();  // Test if the registry exists
+            } catch (RemoteException e) {
+                // If not found, create the registry
+                registry = LocateRegistry.createRegistry(1099);
+            }
             registry.rebind(name, stub);
-            System.out.println("Server " + name + " ready on port " + port);
+            System.out.println("Server " + name + " ready on port " + port + (enableCache ? " with cache enabled" : " with cache disabled"));
 
 
         } catch (Exception e) {
@@ -32,6 +43,7 @@ public class Server extends CityService{
             throw new RuntimeException(e);
         }
     }
+
 
 
 }

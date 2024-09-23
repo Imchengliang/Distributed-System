@@ -41,7 +41,7 @@ public class DistributedClients implements Remote {
 
     private void startClient(int port) {
         try {
-            registry = LocateRegistry.getRegistry("localhost", port - 7);
+            registry = LocateRegistry.getRegistry("localhost", 1099);
             loadBalancer = (LoadBalancerInterface) registry.lookup("load-balancer");
             UnicastRemoteObject.exportObject(this, port);
             registry.bind("client:" + clientNumber, this);

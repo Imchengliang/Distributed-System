@@ -31,9 +31,9 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
             // Export LoadBalancer
             //TODO:LOOK FOR REGISTRY ON RIGHT PORT
 
+            int serverPort = 1099;
+            registry = LocateRegistry.getRegistry("localhost", serverPort);
             for (int i = 1; i < numServers; i++) {
-                int serverPort = 1099 + i;
-                registry = LocateRegistry.getRegistry("localhost", serverPort);
                 servers[i] = (CityInterface) registry.lookup("server_" + i);
             }
 

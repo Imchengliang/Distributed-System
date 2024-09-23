@@ -18,12 +18,17 @@ public class CityService implements CityInterface {
     private final int serverZone;
     private volatile boolean executing = false;
 
-    private final Map<String, Integer> cache = new HashMap<>();
+    private final FixedSizeCache<String, Integer> cache;
 
-    public CityService(String csvFilePath, int serverZone) throws IOException {
+    private final boolean cacheEnabled;
+
+
+    public CityService(String csvFilePath, int serverZone, boolean cacheEnabled) throws IOException {
         CSVDatabase csvDatabase = new CSVDatabase();
         this.cities = csvDatabase.readCitiesFromCSV(csvFilePath);
         this.serverZone = serverZone;
+        this.cacheEnabled = cacheEnabled;
+        this.cache = new FixedSizeCache<>(150);
 
         // Start the task acceptance and processing threads
         new Thread(this::processTasks).start();
@@ -79,7 +84,7 @@ private void checkZoneLatency(int clientZone) throws InterruptedException {
     @Override
     public int getPopulationOfCountry(int clientZone, String countryName) throws RemoteException {
         String cacheKey = "population:" + countryName;
-        if (cache.containsKey(cacheKey)) {
+        if (cacheEnabled && cache.containsKey(cacheKey)) {
             System.out.println("Fetching from cache for country: " + countryName);
             return cache.get(cacheKey);
         }
@@ -113,7 +118,7 @@ private void checkZoneLatency(int clientZone) throws InterruptedException {
     @Override
     public int getNumberOfCities(int clientZone,String countryName, int min) throws RemoteException {
         String cacheKey = "cities:" + countryName + ":" + min;
-        if (cache.containsKey(cacheKey)) {
+        if (cacheEnabled && cache.containsKey(cacheKey)) {
             System.out.println("Fetching from cache for cities in " + countryName + " with min " + min);
             return cache.get(cacheKey);
         }
@@ -144,7 +149,7 @@ private void checkZoneLatency(int clientZone) throws InterruptedException {
     @Override
     public int getNumberOfCountries(int clientZone, int cityCount, int minPopulation) throws RemoteException {
         String cacheKey = "countries:" + cityCount + ":" + minPopulation;
-        if (cache.containsKey(cacheKey)) {
+        if (cacheEnabled && cache.containsKey(cacheKey)) {
             System.out.println("Fetching from cache for countries with cityCount " + cityCount + " and minPopulation " + minPopulation);
             return cache.get(cacheKey);
         }
@@ -191,7 +196,7 @@ private void checkZoneLatency(int clientZone) throws InterruptedException {
     @Override
     public int getNumberOfCountries(int clientZone, int cityCount, int minPopulation, int maxPopulation) throws RemoteException {
         String cacheKey = "countries:" + cityCount + ":" + minPopulation + ":" + maxPopulation;
-        if (cache.containsKey(cacheKey)) {
+        if (cacheEnabled && cache.containsKey(cacheKey)) {
             System.out.println("Fetching from cache for countries with cityCount " + cityCount + ", minPopulation " + minPopulation + " and maxPopulation " + maxPopulation);
             return cache.get(cacheKey);
         }

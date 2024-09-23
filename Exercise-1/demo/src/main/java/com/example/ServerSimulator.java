@@ -7,12 +7,23 @@ public class ServerSimulator {
         // Number of servers (or zones) to create
         int numServers = 5;
         int loadBalancerPort = 1096;
+        boolean enableCache = false; // Default: no cache
+
+        // Parse command-line arguments to check for cache flag
+        for (String arg : args) {
+            if (arg.equals("--enable-cache")) {
+                enableCache = true; // Enable cache if the flag is passed
+                break;
+            }
+        }
+
 
         try{
         for (int i = 1; i <= numServers; i++) {
             final int serverZone = i;  // serverZone
 
             // Create and start a server in a new thread
+            boolean finalEnableCache = enableCache;
             new Thread(() -> {
                 try {
                     // Each server runs the logic in ServerThread class
@@ -21,7 +32,7 @@ public class ServerSimulator {
                     //can also autoassign port, using 0 as port
                     int port = 1099+ serverZone; // assign port + i
 
-                    Server.startServer(serverName, port, serverZone); // Start server logic
+                    Server.startServer(serverName, port, serverZone, finalEnableCache); // Start server logic
 
                 } catch (Exception e) {
                     e.printStackTrace();
