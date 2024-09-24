@@ -11,6 +11,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.FutureTask;
 
 public class Server extends CityService{
 
@@ -23,7 +24,7 @@ public class Server extends CityService{
     }
 
     @Override
-    public void addTask(Runnable task, int clientZone) {
+    public void addTask(FutureTask<?> task, int clientZone) {
         super.addTask(task, clientZone); // Call the super method to add the task
         logQueueSizeIfChanged(); // Log if the queue size has changed
     }
