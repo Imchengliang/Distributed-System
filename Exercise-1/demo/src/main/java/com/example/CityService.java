@@ -29,15 +29,21 @@ public class CityService implements CityInterface {
         new Thread(this::processTasks).start();
     }
 
-    private void checkZoneLatency(int clientZone) throws InterruptedException {
+    private long checkZoneLatency(int clientZone) throws InterruptedException {
+        long delayTime;
         if (clientZone == this.serverZone) {
-            Thread.sleep(80); // Same zone, lower latency
+            delayTime = 80;
+            Thread.sleep(delayTime); // Same zone, lower latency
+            System.out.println("\nSame zone, adding 80ms latency.");
         } else {
-            Thread.sleep(170); // Different zones, higher latency
+            delayTime = 170;
+            Thread.sleep(delayTime); // Different zones, higher latency
+            System.out.println("\nDifferent zone, adding 170ms latency.");
         }
+        return delayTime;
     }
 
-    public void addTask(FutureTask<?> task, int clientZone) {
+    public void addTask(Runnable task, int clientZone) {
         taskQueue.add(new TimedTask(task, clientZone));
         synchronized (taskQueue) {
             taskQueue.notify();
@@ -50,18 +56,22 @@ public class CityService implements CityInterface {
             try {
                 // This will block until a task is available
                 TimedTask timedTask = (TimedTask) taskQueue.take();
+                //logQueueSizeIfChanged();
 
                 // Now we have a valid task to execute
                 executing = true;
                 try {
-                    long delayStartTime = System.currentTimeMillis();
-                    checkZoneLatency(timedTask.getClientZone());
-                    long delayEndTime = System.currentTimeMillis();
+                    // Check delay time
+                    //long delayTime = checkZoneLatency(timedTask.getClientZone());
 
-                    long delayTime = delayEndTime - delayStartTime;
-                    timedTask.setDelayTime(delayTime);
-                    System.out.println("starting processing of task");
-                    timedTask.run();
+                    // Set the delay time in the timedTask
+                    //timedTask.setDelayTime(delayTime);
+
+                    Thread.sleep(80);
+                    timedTask.run(); // Execute the task
+                    //new Thread(timedTask.getTask()).start();
+
+                    // You can log or process execution and waiting times as needed
                 } catch (Exception e) {
                     System.out.println("Error during task execution: " + e.getMessage());
                 } finally {
@@ -73,8 +83,6 @@ public class CityService implements CityInterface {
             }
         }
     }
-
-
 
 
     @Override
@@ -95,18 +103,39 @@ public class CityService implements CityInterface {
             return totalPopulation;
         });
 
-        long startTime = System.currentTimeMillis();
-        addTask(futureTask, clientZone); // Add FutureTask to the queue
+        
+        long startTime = System.currentTimeMillis(); // Time for entering queue
+        TimedTask timedTask = new TimedTask(futureTask, clientZone);
+
+        long delayTime;
+        try {
+            delayTime = checkZoneLatency(timedTask.getClientZone());
+        } catch (InterruptedException e) {
+            // Handle the exception, for example:
+            Thread.currentThread().interrupt(); // Restore the interrupted status
+            System.err.println("Thread was interrupted: " + e.getMessage());
+            // You can also choose to return a default value or rethrow the exception
+            delayTime = -1; // or any appropriate default value
+        }
+
+        addTask(timedTask, clientZone); // Add to queue
 
         try {
             // Wait for the result of the future task
             int population = futureTask.get();
-            long endTime = System.currentTimeMillis();
+            long endTime = System.currentTimeMillis(); // Time for getting result
             long turnaroundTime = endTime - startTime;
 
-            // Placeholder for execution time and waiting time calculation
-            long executionTime = 0; // This needs to be calculated as per your requirement
-            long waitingTime = 0; // This needs to be calculated as per your requirement
+            /* 
+            long delayTime;
+            if (clientZone == this.serverZone) {
+                delayTime = 80;
+            } else {
+                delayTime = 170;
+            }*/
+
+            long executionTime = timedTask.getExecutionTime();
+            long waitingTime = timedTask.getWaitingTime(delayTime);
 
             CityServiceResult result = new CityServiceResult(population, "getPopulationOfCountry", countryName, clientZone, turnaroundTime, executionTime, waitingTime, serverZone);
             cache.put(cacheKey, result);
@@ -136,6 +165,18 @@ public class CityService implements CityInterface {
         });
 
         long startTime = System.currentTimeMillis();
+        TimedTask timedTask = new TimedTask(futureTask, clientZone);
+
+        long delayTime;
+        try {
+            delayTime = checkZoneLatency(timedTask.getClientZone());
+        } catch (InterruptedException e) {
+            // Handle the exception, for example:
+            Thread.currentThread().interrupt(); // Restore the interrupted status
+            System.err.println("Thread was interrupted: " + e.getMessage());
+            // You can also choose to return a default value or rethrow the exception
+            delayTime = -1; // or any appropriate default value
+        }
         addTask(futureTask, clientZone); // Updated to call addTask with FutureTask
 
         try {
@@ -143,9 +184,16 @@ public class CityService implements CityInterface {
             long endTime = System.currentTimeMillis();
             long turnaroundTime = endTime - startTime;
 
-            // Assuming TimedTask is instantiated here or tracking it correctly
-            long executionTime = 0; // Placeholder, adjust as necessary
-            long waitingTime = 0; // Placeholder, adjust as necessary
+            /* 
+            long delayTime;
+            if (clientZone == this.serverZone) {
+                delayTime = 80;
+            } else {
+                delayTime = 170;
+            }*/
+
+            long executionTime = timedTask.getExecutionTime();
+            long waitingTime = timedTask.getWaitingTime(delayTime);
 
             CityServiceResult result = new CityServiceResult(numberOfCities, "getNumberOfCities", countryName + " " + min, clientZone, turnaroundTime, executionTime, waitingTime, serverZone);
             cache.put(cacheKey, result);
@@ -183,6 +231,17 @@ public class CityService implements CityInterface {
         });
 
         long startTime = System.currentTimeMillis();
+        TimedTask timedTask = new TimedTask(futureTask, clientZone);
+        long delayTime;
+        try {
+            delayTime = checkZoneLatency(timedTask.getClientZone());
+        } catch (InterruptedException e) {
+            // Handle the exception, for example:
+            Thread.currentThread().interrupt(); // Restore the interrupted status
+            System.err.println("Thread was interrupted: " + e.getMessage());
+            // You can also choose to return a default value or rethrow the exception
+            delayTime = -1; // or any appropriate default value
+        }
         addTask(futureTask, clientZone); // Directly add FutureTask to the queue
 
         try {
@@ -190,9 +249,16 @@ public class CityService implements CityInterface {
             long endTime = System.currentTimeMillis();
             long turnaroundTime = endTime - startTime;
 
-            // Placeholder for execution time and waiting time calculations
-            long executionTime = 0; // This needs to be calculated based on your requirement
-            long waitingTime = 0; // This needs to be calculated based on your requirement
+            /* 
+            long delayTime;
+            if (clientZone == this.serverZone) {
+                delayTime = 80;
+            } else {
+                delayTime = 170;
+            }*/
+
+            long executionTime = timedTask.getExecutionTime();
+            long waitingTime = timedTask.getWaitingTime(delayTime);
 
             CityServiceResult result = new CityServiceResult(numberOfCountries, "getNumberOfCountries", cityCount + " " + minPopulation, clientZone, turnaroundTime, executionTime, waitingTime, serverZone);
             cache.put(cacheKey, result);
@@ -230,6 +296,17 @@ public class CityService implements CityInterface {
         });
 
         long startTime = System.currentTimeMillis();
+        TimedTask timedTask = new TimedTask(futureTask, clientZone);
+        long delayTime;
+        try {
+            delayTime = checkZoneLatency(timedTask.getClientZone());
+        } catch (InterruptedException e) {
+            // Handle the exception, for example:
+            Thread.currentThread().interrupt(); // Restore the interrupted status
+            System.err.println("Thread was interrupted: " + e.getMessage());
+            // You can also choose to return a default value or rethrow the exception
+            delayTime = -1; // or any appropriate default value
+        }
         addTask(futureTask, clientZone); // Directly add FutureTask to the queue
 
         try {
@@ -237,9 +314,16 @@ public class CityService implements CityInterface {
             long endTime = System.currentTimeMillis();
             long turnaroundTime = endTime - startTime;
 
-            // Placeholder for execution time and waiting time calculations
-            long executionTime = 0; // This needs to be calculated based on your requirement
-            long waitingTime = 0; // This needs to be calculated based on your requirement
+            /* 
+            long delayTime;
+            if (clientZone == this.serverZone) {
+                delayTime = 80;
+            } else {
+                delayTime = 170;
+            }*/
+
+            long executionTime = timedTask.getExecutionTime();
+            long waitingTime = timedTask.getWaitingTime(delayTime);
 
             CityServiceResult result = new CityServiceResult(numberOfCountries, "getNumberOfCountries", cityCount + " " + minPopulation + " " + maxPopulation, clientZone, turnaroundTime, executionTime, waitingTime, serverZone);
             cache.put(cacheKey, result);
@@ -248,7 +332,7 @@ public class CityService implements CityInterface {
             throw new RemoteException("Error retrieving countries", e);
         }
     }
-
+    
     @Override
     public int getQueueSize() throws RemoteException {
         return taskQueue.size();

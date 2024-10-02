@@ -33,22 +33,28 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
 
             int serverPort = 1099;
             registry = LocateRegistry.getRegistry("localhost", serverPort);
-            for (int i = 1; i < numServers; i++) {
-                servers[i] = (CityInterface) registry.lookup("server_" + i);
+            for (int i = 1; i <= numServers; i++) {
+                try {
+                    servers[i-1] = (CityInterface) registry.lookup("server_" + i);
+                    System.out.println("Server " + i + " bound successfully.");
+                } catch (NotBoundException e) {
+                    System.err.println("Server " + i + " not bound: " + e.getMessage());
+                    servers[i - 1] = null; // Explicitly set to null for clarity
+                }
             }
 
             // Bind the LoadBalancer to the registry
             registry.bind("load-balancer", this);
 
         } catch (Exception e) {
-            System.out.println("\nError:\n" + e);
+            System.out.println("\nError between LoadBalancer and Server: \n" + e);
             System.exit(1);
         }
         System.out.println("LoadBalancer is started");
     }
 
     private void updateAssignmentCount(int clientZone) {
-        serverAssignmentCounts[clientZone]++;
+        serverAssignmentCounts[clientZone - 1]++;
 
         /* for checking on the queue
         if (serverAssignmentCounts[clientZone] >= 18) {
@@ -60,25 +66,28 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
     }
 
     // Get queue size in each server
-    /*
+
     public void updateQueueData(int clientZone) throws RemoteException {
-        int queueSize = servers[clientZone].getQueueSize();
-        serverQueuesSizes[clientZone] = queueSize;
+        int queueSize = servers[clientZone - 1].getQueueSize();
+        serverQueuesSizes[clientZone - 1] = queueSize;
     }
 
-     */
+
 
     @Override
     public ServerAddress assignServer(int clientZone) throws RemoteException {
         int selectedServer;
 
         // was clientZone 0 to 4 previously
-        if (clientZone < 1 || clientZone > numServers) {
-            System.out.println("Invalid client zone.");
-            System.exit(1);
-        }
+        //if (clientZone < 1 || clientZone > numServers) {
+            //System.out.println("Invalid client zone.");
+            //System.exit(1);
+        //}
 
-        if (serverQueuesSizes[clientZone] < 18) {
+        updateQueueData(clientZone);
+        System.out.println("Queue size in Server " + clientZone + " is " + serverQueuesSizes[clientZone - 1]);
+
+        if (serverQueuesSizes[clientZone - 1] < 18) {
             selectedServer = clientZone;
             //return new ServerAddress("server_" + selectedServer);
         }
@@ -87,16 +96,16 @@ public class LoadBalancer extends UnicastRemoteObject implements LoadBalancerInt
             int neighborServer1 = (clientZone % 5) + 1; 
             int neighborServer2 = ((clientZone + 1) % 5) + 1; 
 
-            if (serverQueuesSizes[neighborServer1] >= 8 && serverQueuesSizes[neighborServer2] >= 8) {
+            if (serverQueuesSizes[neighborServer1 - 1] >= 8 && serverQueuesSizes[neighborServer2 - 1] >= 8) {
                 selectedServer = clientZone;
             }
 
-            else if (serverQueuesSizes[neighborServer1] == serverQueuesSizes[neighborServer2]) {
+            else if (serverQueuesSizes[neighborServer1 - 1] == serverQueuesSizes[neighborServer2 - 1]) {
                 selectedServer = (random.nextBoolean()) ? neighborServer1 : neighborServer2;
             }
 
             else {
-                selectedServer = (serverQueuesSizes[neighborServer1] < serverQueuesSizes[neighborServer2]) ? neighborServer1 : neighborServer2;
+                selectedServer = (serverQueuesSizes[neighborServer1 - 1] < serverQueuesSizes[neighborServer2 - 1]) ? neighborServer1 : neighborServer2;
             }
         }
 

@@ -24,8 +24,8 @@ public class DistributedClients implements Remote {
     private Registry registry = null;
     private LoadBalancerInterface loadBalancer = null;
     private CityInterface server = null;
-    private boolean toggle = true;
     private List<List<CityServiceResult>> results = new ArrayList<>();
+    private List<CityServiceResult> result = new ArrayList<>();
     
     private List<Integer> getPopulationOfCountryTurnAround = new ArrayList<>();
     private List<Integer> getPopulationOfCountryExecution = new ArrayList<>();
@@ -43,7 +43,6 @@ public class DistributedClients implements Remote {
     private List<Integer> getNumberOfCountries2Execution = new ArrayList<>();
     private List<Integer> getNumberOfCountries2Waiting = new ArrayList<>();
 
-    Lock lock = new ReentrantLock();
 
     public DistributedClients(int clientNumber, int port) {
         this.clientNumber = clientNumber;
@@ -61,7 +60,7 @@ public class DistributedClients implements Remote {
             System.out.println("Client Error:" + e.toString());
             System.exit(1);
         }
-        System.out.println("Client:" + clientNumber + "is running");
+        System.out.println("Client is running");
     }
 
     public void sendQueryToServer(String fullQuery, int clientZone){
@@ -80,10 +79,12 @@ public class DistributedClients implements Remote {
         }
 
         try {
-            List<CityServiceResult> result = null;
+            List<CityServiceResult> result = new ArrayList<>();
             switch (methodName) {
-                case "getPopulationOfCountry" -> {
+                case "getPopulationofCountry" -> {
+                    System.out.println("getPopulationOfCountry");
                     result = server.getPopulationOfCountry(clientZone, args);  // args is the country name in this case
+                    System.out.println("Result: " + result.toString() + '\n');
                     results.add(result);
                     for (CityServiceResult cityResult : result) {
                         getPopulationOfCountryTurnAround.add((int) cityResult.getTurnaroundTime());
@@ -91,9 +92,12 @@ public class DistributedClients implements Remote {
                         getPopulationOfCountryWaiting.add((int) cityResult.getWaitingTime());
                     }
                 }
-                case "getNumberOfCities" -> {
+                case "getNumberofCities" -> {
+                    System.out.println("getNumberOfCities");
                     String[] arg = args.split(" ");
-                    result = server.getNumberOfCities(clientZone, arg[0], Integer.parseInt(arg[1]));  // arg[0] is country name, arg[1] is min population
+                    String country = args.replace(arg[arg.length-1], "").trim();
+                    result = server.getNumberOfCities(clientZone, country, Integer.parseInt(arg[arg.length-1]));  // arg[0] is country name, arg[1] is min population
+                    System.out.println("Result: " + result.toString() + '\n');
                     results.add(result);
                     for (CityServiceResult cityResult : result) {
                         getNumberOfCitiesTurnAround.add((int) cityResult.getTurnaroundTime());
@@ -101,10 +105,12 @@ public class DistributedClients implements Remote {
                         getNumberOfCitiesWaiting.add((int) cityResult.getWaitingTime());
                     }
                 }
-                case "getNumberOfCountries" -> {
+                case "getNumberofCountries" -> {
+                    System.out.println("getNumberOfCountries");
                     String[] arg = args.split(" ");
                     if (arg.length == 2) {
                         result = server.getNumberOfCountries(clientZone, Integer.parseInt(arg[0]), Integer.parseInt(arg[1]));  // cityCount, minPopulation
+                        System.out.println("Result: " + result.toString() + '\n');
                         results.add(result);
                         for (CityServiceResult cityResult : result) {
                             getNumberOfCountries1TurnAround.add((int) cityResult.getTurnaroundTime());
@@ -113,13 +119,8 @@ public class DistributedClients implements Remote {
                         }
                     } else {
                         result = server.getNumberOfCountries(clientZone, Integer.parseInt(arg[0]), Integer.parseInt(arg[1]), Integer.parseInt(arg[2]));  // cityCount, minPopulation, maxPopulation
+                        System.out.println("Result: " + result.toString() + '\n');
                         results.add(result);
-                        //CityServiceResult cityResult1 = result.get(4);
-                        //getNumberOfCountries2TurnAround.add((int) cityResult1.getTurnaroundTime());
-                        //CityServiceResult cityResult2 = result.get(5);
-                        //getNumberOfCountries2Execution.add((int) cityResult2.getExecutionTime());
-                        //CityServiceResult cityResult3 = result.get(6);
-                        //getNumberOfCountries2Waiting.add((int) cityResult3.getWaitingTime());
                         for (CityServiceResult cityResult : result) {
                             getNumberOfCountries2TurnAround.add((int) cityResult.getTurnaroundTime());
                             getNumberOfCountries2Execution.add((int) cityResult.getExecutionTime());
@@ -128,24 +129,16 @@ public class DistributedClients implements Remote {
                     }
                 }
             }
-            System.out.println("Result: " + result);
-
-            // trigger delay
-            int delay = toggle ? 50 : 20;
-            Thread.sleep(delay);
-            toggle = !toggle;
-
-            //writeResultToTxt(results);
-            //query.timeStamps[0] = System.currentTimeMillis();
-            //server.sendQuery(query);
-            //sentQueries++;
-            //System.out.println("Client sent query. Number of sent queries: " + sentQueries);
 
 
         } catch (Exception e) {
             System.out.println("Query Error:" + e.toString());
             System.exit(1);
         }
+    }
+
+    public List<List<CityServiceResult>> getResults() {
+        return results;
     }
 
     private static Object[] calculateAvgMinMax(List<Integer> numbers) {
@@ -162,38 +155,40 @@ public class DistributedClients implements Remote {
         return new Object[] {average, min, max};
     }
 
-    private void writeResultToTxt(List<List<Object>> results){
+    public void writeResultToTxt(List<List<CityServiceResult>> results){
         try {
+            System.out.println("Writing results into txt");
             FileWriter writer = new FileWriter("dataset/naive_server.txt");
 
-            for (List<Object> result : results) {
+            for (List<CityServiceResult> result : results) {
                 writer.write(result.toString() + "\n");
             }
 
             Object[] stats11 = calculateAvgMinMax(getPopulationOfCountryTurnAround);
             Object[] stats12 = calculateAvgMinMax(getPopulationOfCountryExecution);
             Object[] stats13 = calculateAvgMinMax(getPopulationOfCountryWaiting);
-            writer.write("getPopulationOfCountry avg turn-around time: " + stats11[0] + "ms, avg execution time: " + stats12[0] + "ms, avg waiting time: " + stats13[0] + "ms, min turn-around time: " + stats11[1] + "ms, max turn-around time: " + stats11[1] + "ms\n");
+            writer.write("getPopulationOfCountry avg turn-around time: " + stats11[0] + "ms, avg execution time: " + stats12[0] + "ms, avg waiting time: " + stats13[0] + "ms, min turn-around time: " + stats11[1] + "ms, max turn-around time: " + stats11[2] + "ms\n");
 
             Object[] stats21 = calculateAvgMinMax(getNumberOfCitiesTurnAround);
             Object[] stats22 = calculateAvgMinMax(getNumberOfCitiesExecution);
             Object[] stats23 = calculateAvgMinMax(getNumberOfCitiesWaiting);
-            writer.write("getNumberOfCities avg turn-around time: " + stats21[0] + "ms, avg execution time: " + stats22[0] + "ms, avg waiting time: " + stats23[0] + "ms, min turn-around time: " + stats21[1] + "ms, max turn-around time: " + stats21[1] + "ms\n");
+            writer.write("getNumberOfCities avg turn-around time: " + stats21[0] + "ms, avg execution time: " + stats22[0] + "ms, avg waiting time: " + stats23[0] + "ms, min turn-around time: " + stats21[1] + "ms, max turn-around time: " + stats21[2] + "ms\n");
 
             Object[] stats31 = calculateAvgMinMax(getNumberOfCountries1TurnAround);
             Object[] stats32 = calculateAvgMinMax(getNumberOfCountries1Execution);
             Object[] stats33 = calculateAvgMinMax(getNumberOfCountries1Waiting);
-            writer.write("getNumberOfCountries avg turn-around time: " + stats31[0] + "ms, avg execution time: " + stats32[0] + "ms, avg waiting time: " + stats33[0] + "ms, min turn-around time: " + stats31[1] + "ms, max turn-around time: " + stats31[1] + "ms\n");
+            writer.write("getNumberOfCountries avg turn-around time: " + stats31[0] + "ms, avg execution time: " + stats32[0] + "ms, avg waiting time: " + stats33[0] + "ms, min turn-around time: " + stats31[1] + "ms, max turn-around time: " + stats31[2] + "ms\n");
 
             Object[] stats41 = calculateAvgMinMax(getNumberOfCountries2TurnAround);
             Object[] stats42 = calculateAvgMinMax(getNumberOfCountries2Execution);
             Object[] stats43 = calculateAvgMinMax(getNumberOfCountries2Waiting);
-            writer.write("getNumberOfCountries avg turn-around time: " + stats41[0] + "ms, avg execution time: " + stats42[0] + "ms, avg waiting time: " + stats43[0] + "ms, min turn-around time: " + stats41[1] + "ms, max turn-around time: " + stats41[1] + "ms\n");
+            writer.write("getNumberOfCountries avg turn-around time: " + stats41[0] + "ms, avg execution time: " + stats42[0] + "ms, avg waiting time: " + stats43[0] + "ms, min turn-around time: " + stats41[1] + "ms, max turn-around time: " + stats41[2] + "ms\n");
 
             writer.close();
+            System.out.println("Writing is finished");
 
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Error writing to file: " + e.getMessage());
         }
     }
 
@@ -201,11 +196,12 @@ public class DistributedClients implements Remote {
         try {
             // Ask the proxy-server for a server address
             ServerAddress response = loadBalancer.assignServer(clientZone);
-
             // Lookup the returned server address
+            System.out.println("Server Name: " + response.address);
             server = (CityInterface) registry.lookup(response.address);
         } catch (Exception e) {
-            System.out.println("Error occurs between LoadBalancer and Client " + clientNumber);
+            System.out.println("Error occurs in Server " + clientZone);
+            e.printStackTrace(System.out);
             System.exit(1);
         }
     }

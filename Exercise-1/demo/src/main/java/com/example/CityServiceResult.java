@@ -1,6 +1,8 @@
 package com.example;
 
-public class CityServiceResult {
+import java.io.Serializable;
+
+public class CityServiceResult implements Serializable {
     private final int result;
     private final String methodName;
     private final String inputQuery;
